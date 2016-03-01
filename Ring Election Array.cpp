@@ -169,8 +169,6 @@ int main()
                 {
                     tmp = dead[reborn];
                     A[tmp].status = true;
-//                    if (oldbtolife!=btolife)
-//                        cout<<"Node "<<tmp<<" "<<A[tmp].PID<<" ["<<A[tmp].priority<<"] is LIVE!\n";
                     oldbtolife = btolife;
                     btolife = reborn;
                     reborn = (reborn+1)%num;
@@ -187,8 +185,6 @@ int main()
                     {
                         tmp = dead[reborn];
                         A[tmp].status = true;
-//                        if (oldbtolife!=btolife)
-//                            cout<<"Node "<<tmp<<" "<<A[tmp].PID<<" ["<<A[tmp].priority<<"] is LIVE!\n";
                         oldbtolife = btolife;
                         btolife = reborn;
                         reborn = (reborn + 1)%num;
