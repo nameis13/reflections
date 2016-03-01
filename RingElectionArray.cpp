@@ -133,6 +133,7 @@ int main()
                     dead[dindex] = leader[1];
                     tmp = leader[1];
                     oldStatus[tmp] = false;
+                    A[tmp].leaderIndex = -1;
                     start[dindex] = clock();
                     break;
                 }
@@ -198,6 +199,7 @@ int main()
             }
             for (i = 0; i<num; i++)
             {
+                if (A[i].status)
                 A[i].leaderIndex = leader[1];
             }
             cout<<"\nPress 1 to continue : ";
