@@ -43,9 +43,9 @@ class node
         cout<<"\n["<<i<<"] "<<PID<<" : "<<priority;
         cout<<endl;
     }
-    void bringBackToLife(node *a)
+    bool storeStatus()
     {
-
+        return status;
     }
 };
 
@@ -74,6 +74,9 @@ int main()
     leader[0] = 0;
     leader[1] = 0;
     int ind = 0,j;
+
+    bool oldStatus[num];
+
     for (i = 0; i<num; i++,ind++)
     {
         A[i].initial(p, num);
@@ -90,6 +93,7 @@ int main()
             leader[0] = A[i].priority;
             leader [1] = i;
         }
+        oldStatus[i] = true;
     }
 
     // Network created, display the nodes
@@ -100,9 +104,9 @@ int main()
 
     int counter = 1;
     int resp = 1, ldrr=0;
-    int dead[num], dindex=-1, reborn, btolife=0;
+    int dead[num], dindex=-1, reborn, btolife=0, oldbtolife = -1;
+    int randt;
     clock_t start[num];
-    double duration;
 
     // Simulate election
 
@@ -121,9 +125,12 @@ int main()
         {
             if (tmp == 0)
                 {
+                    dindex = (dindex + 1)%num;
                     sense(A, leader[1], num, false);
-                    int dead[(++dindex)%num] = leader[1];
-                    start[(++dindex)%num] = clock();
+                    dead[dindex] = leader[1];
+                    tmp = leader[1];
+                    oldStatus[tmp] = false;
+                    start[dindex] = clock();
                     break;
                 }
             else
@@ -131,20 +138,20 @@ int main()
             tmp = rand()%10;
         }
 
-        // Leader has failed, initiate an election
+        // Find nodes back to live again
+        for (i = 0; i<num; i++)
+        {
+            if (oldStatus[i]==false && A[i].status==true)
+            {
+                cout<<"\n\n\t***BREAKING NEWS***\n";
+                cout<<"Node ["<<i<<"] "<<A[i].PID<<" : "<<A[i].priority<<" is back to LIVE!"<<endl;
+            }
+            oldStatus[i]=A[i].status;
+        }
 
+        // Initiate election
         initiateElection(A, leader[1], num, leader);
 
-        for (reborn = btolife; reborn<=dindex; reborn++)
-        {
-            if ((clock()-start[reborn])>5000)
-            {
-                tmp = dead[reborn];
-                A[tmp].status = true;
-                btolife = reborn;
-            }
-        }
-     //   bringBackToLife(A, leader[1]);
         if (leader[1]==-1)
         {
             cout<<"\nAll nodes failed. Exiting.\n";
@@ -154,12 +161,48 @@ int main()
         {
             tmp = leader[1];
             cout<<"\nNew Leader Node ["<<leader[1]<<"] "<<A[tmp].PID<<" : "<<leader[0]<<endl;
+
+            for (reborn = btolife; reborn>dindex; )
+            {
+                randt = (3 + rand()%5)*1000;
+                if ((clock()-start[reborn])>randt)
+                {
+                    tmp = dead[reborn];
+                    A[tmp].status = true;
+//                    if (oldbtolife!=btolife)
+//                        cout<<"Node "<<tmp<<" "<<A[tmp].PID<<" ["<<A[tmp].priority<<"] is LIVE!\n";
+                    oldbtolife = btolife;
+                    btolife = reborn;
+                    reborn = (reborn+1)%num;
+                }
+                else
+                    break;
+            }
+            if (btolife<=dindex)
+            {
+                for (reborn = btolife; reborn<=dindex; )
+                {
+                    randt = (3 + rand()%5)*1000;
+                    if ((clock()-start[reborn])>randt)
+                    {
+                        tmp = dead[reborn];
+                        A[tmp].status = true;
+//                        if (oldbtolife!=btolife)
+//                            cout<<"Node "<<tmp<<" "<<A[tmp].PID<<" ["<<A[tmp].priority<<"] is LIVE!\n";
+                        oldbtolife = btolife;
+                        btolife = reborn;
+                        reborn = (reborn + 1)%num;
+                    }
+                    else
+                        break;
+                }
+            }
             cout<<"\nPress 1 to continue : ";
             cin>>resp;
-            if ((clock()-start)>5000)
-    //            bringBackToLife(A, );
             if (resp!=1)
                 exit(0);
+            else
+                cout<<"\n--------------------------------"<<endl;
         }
     }
     return 0;
@@ -190,7 +233,7 @@ void initiateElection (node *a, int lead, int num, int *leader)
     int *newLeader = (int *)malloc(sizeof(int)*2);
     newLeader[0] = -1;
     newLeader[1] = -1;
-    int cmp;
+    int cmp, al=0;
     cmp = lead - 1;
     if (cmp<0)
         cmp = num - 1;
@@ -201,7 +244,7 @@ void initiateElection (node *a, int lead, int num, int *leader)
     cout<<"Election Message : ";
     for (; ;i++,index++)
         {
-
+            al++;
             i = i%num;
             if (i==cmp)
                 {
@@ -221,6 +264,8 @@ void initiateElection (node *a, int lead, int num, int *leader)
             }
             else
                 cout<<a[i].priority<<" [Dead]\t";
+            if (al%5==0)
+                cout<<endl;
         }
     cout<<"\n\n\tElection Finished!"<<endl;
     leader[0] = newLeader[0];
