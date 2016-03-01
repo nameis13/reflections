@@ -18,6 +18,7 @@ class node
     int priority;
     bool status;
     char *PID;
+    int leaderIndex;
     void initial (bool rnd, int n)
     {
         if (rnd == true)
@@ -99,8 +100,10 @@ int main()
     // Network created, display the nodes
 
     for (i = 0; i<num; i++)
-    A[i].disp(i, num);
-
+    {
+        A[i].disp(i, num);
+        A[i].leaderIndex = leader[1];
+    }
 
     int counter = 1;
     int resp = 1, ldrr=0;
@@ -192,6 +195,10 @@ int main()
                     else
                         break;
                 }
+            }
+            for (i = 0; i<num; i++)
+            {
+                A[i].leaderIndex = leader[1];
             }
             cout<<"\nPress 1 to continue : ";
             cin>>resp;
