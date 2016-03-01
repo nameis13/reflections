@@ -39,11 +39,19 @@ class node
         PID[i] = '\0';
         status = true;
     }
+
     void disp(int i, int n)
     {
         cout<<"\n["<<i<<"] "<<PID<<" : "<<priority;
         cout<<endl;
     }
+
+    int tellLeader (int i, int j)
+    {
+        cout<<"\nNode "<<i<<" asks "<<j<<" for the current leader!\n";
+        return leaderIndex;
+    }
+
     bool storeStatus()
     {
         return status;
