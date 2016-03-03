@@ -61,6 +61,7 @@ class node
 void sense(node *a, int lead, int num, bool alive);
 void initiateElection (node *a, int lead, int num, int *leader);
 void bringBackToLife(node *a, int ldrr);
+void randomNodeFailure (node *a, int sz);
 
 int main()
 {
@@ -277,7 +278,7 @@ void initiateElection (node *a, int lead, int num, int *leader)
             }
             else
                 cout<<a[i].priority<<" [Dead]\t";
-            if (al%5==0)
+            if (al%4==0)
                 cout<<endl;
         }
     cout<<"\n\n\tElection Finished!"<<endl;
