@@ -289,3 +289,17 @@ void bringBackToLife(node *a, int ldrr)
 {
     a[ldrr].status=true;
 }
+
+void randomNodeFailure (node *a, int sz)
+{
+    int i = rand()%4;
+    if (i==0)
+    {
+        X:
+        i = rand()%sz;
+        if (a[i].status)
+            a[i].status = false;
+        else
+            goto X;
+    }
+}
