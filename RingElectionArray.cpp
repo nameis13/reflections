@@ -51,17 +51,16 @@ class node
         cout<<"\nNode "<<i<<" asks "<<j<<" for the current leader!\n";
         return leaderIndex;
     }
-
-    bool storeStatus()
-    {
-        return status;
-    }
 };
 
+void initializeNodes(node *a, int num, bool p, bool *oldStatus, int *leader, clock_t *start);
 void sense(node *a, int lead, int num, bool alive);
+void upAgain(node *A, int num, bool *oldStatus);
 void initiateElection (node *a, int lead, int num, int *leader);
-void bringBackToLife(node *a, int ldrr);
-void randomNodeFailure (node *a, int sz);
+void backToLife(node *A, int num, clock_t *start, int *randt);
+void randomNodeFailure (node *a, int sz, clock_t *ck);
+void setLeader(node *A, int *leader, int num);
+void waitToFail(node *A, int *leader, int num, bool *oldStatus, clock_t *start, int *randt);
 
 int main()
 {
@@ -71,6 +70,8 @@ int main()
     cout<<"Enter the number of nodes: ";
     cin>>num;
 
+    clock_t *start = (clock_t *)malloc(sizeof(clock_t)*num);
+
     cout<<"Random priority? [1] True else False: ";
     cin>>pr;
 
@@ -79,32 +80,14 @@ int main()
         p = true;
     else
         p = false;
+
     class node *A = (node *)malloc(sizeof(node)*num);
     int *leader = (int *)malloc(sizeof(int)*2);
     leader[0] = 0;
     leader[1] = 0;
-    int ind = 0,j;
+    bool *oldStatus = (bool *)malloc(sizeof(bool)*num);
 
-    bool oldStatus[num];
-
-    for (i = 0; i<num; i++,ind++)
-    {
-        A[i].initial(p, num);
-        for (j = 0; j<i; j++)
-        {
-            if (A[j].priority==A[i].priority)
-            {
-                A[i].initial(p, num);
-                j = 0;
-            }
-        }
-        if (A[i].priority>leader[0])
-        {
-            leader[0] = A[i].priority;
-            leader [1] = i;
-        }
-        oldStatus[i] = true;
-    }
+    initializeNodes(A, num, p, oldStatus, leader, start);
 
     // Network created, display the nodes
 
@@ -115,10 +98,8 @@ int main()
     }
 
     int counter = 1;
-    int resp = 1, ldrr=0;
-    int dead[num], dindex=-1, reborn, btolife=0, oldbtolife = -1;
-    int randt;
-    clock_t start[num];
+    int resp = 1;
+    int *randt = (int *)malloc(sizeof(int)*num);
 
     // Simulate election
 
@@ -129,41 +110,12 @@ int main()
         else
             cout<<"\nCurrent Leader : Node "<<leader[1]<<" : "<<leader[0]<<endl;
         tmp = rand()%10;
-        ldrr = leader[1];
 
-        // Waiting for the leader to fail
 
-        while (true)
-        {
-            if (tmp == 0)
-                {
-                    dindex = (dindex + 1)%num;
-                    sense(A, leader[1], num, false);
-                    dead[dindex] = leader[1];
-                    tmp = leader[1];
-                    oldStatus[tmp] = false;
-                    A[tmp].leaderIndex = -1;
-                    start[dindex] = clock();
-                    break;
-                }
-            else
-                sense(A, leader[1], num, true);
-            tmp = rand()%10;
-        }
-
-        // Find nodes back to live again
-        for (i = 0; i<num; i++)
-        {
-            if (oldStatus[i]==false && A[i].status==true)
-            {
-                cout<<"\n\n\t***BREAKING NEWS***\n";
-                cout<<"Node ["<<i<<"] "<<A[i].PID<<" : "<<A[i].priority<<" is back to LIVE!"<<endl;
-            }
-            oldStatus[i]=A[i].status;
-        }
-
-        // Initiate election
-        initiateElection(A, leader[1], num, leader);
+        waitToFail(A, leader, num, oldStatus, start, randt);    // Waiting for the leader to fail
+        randomNodeFailure(A, num, start);                       // Fail a random node
+        upAgain(A, num, oldStatus);                             // Find nodes back to live again
+        initiateElection(A, leader[1], num, leader);            // Initiate election
 
         if (leader[1]==-1)
         {
@@ -174,43 +126,8 @@ int main()
         {
             tmp = leader[1];
             cout<<"\nNew Leader Node ["<<leader[1]<<"] "<<A[tmp].PID<<" : "<<leader[0]<<endl;
-
-            for (reborn = btolife; reborn>dindex; )
-            {
-                randt = (3 + rand()%5)*1000;
-                if ((clock()-start[reborn])>randt)
-                {
-                    tmp = dead[reborn];
-                    A[tmp].status = true;
-                    oldbtolife = btolife;
-                    btolife = reborn;
-                    reborn = (reborn+1)%num;
-                }
-                else
-                    break;
-            }
-            if (btolife<=dindex)
-            {
-                for (reborn = btolife; reborn<=dindex; )
-                {
-                    randt = (3 + rand()%5)*1000;
-                    if ((clock()-start[reborn])>randt)
-                    {
-                        tmp = dead[reborn];
-                        A[tmp].status = true;
-                        oldbtolife = btolife;
-                        btolife = reborn;
-                        reborn = (reborn + 1)%num;
-                    }
-                    else
-                        break;
-                }
-            }
-            for (i = 0; i<num; i++)
-            {
-                if (A[i].status)
-                A[i].leaderIndex = leader[1];
-            }
+            backToLife(A, num, start, randt);
+            setLeader(A, leader, num);
             cout<<"\nPress 1 to continue : ";
             cin>>resp;
             if (resp!=1)
@@ -286,12 +203,7 @@ void initiateElection (node *a, int lead, int num, int *leader)
     leader[1] = newLeader[1];
 }
 
-void bringBackToLife(node *a, int ldrr)
-{
-    a[ldrr].status=true;
-}
-
-void randomNodeFailure (node *a, int sz)
+void randomNodeFailure (node *a, int sz, clock_t *ck)
 {
     int i = rand()%4;
     if (i==0)
@@ -299,8 +211,103 @@ void randomNodeFailure (node *a, int sz)
         X:
         i = rand()%sz;
         if (a[i].status)
-            a[i].status = false;
+            {
+                a[i].status = false;
+                ck[i] = clock()/100;
+            }
         else
             goto X;
     }
+}
+
+void initializeNodes(node *A, int num, bool p, bool *oldStatus, int *leader, clock_t *start)
+{
+    int i,j;
+    for (i = 0; i<num; i++)
+    {
+        A[i].initial(p, num);
+        start[i] = 0;
+        for (j = 0; j<i; j++)
+        {
+            if (A[j].priority==A[i].priority)
+            {
+                if (p==false)
+                    cout<<"\nSorry, multiple nodes can't have the same priority!\n";
+                A[i].initial(p, num);
+                j=0;
+            }
+        }
+
+        if (!p && A[i].priority<0)
+            {
+                cout<<"Illegal priority. Exiting\n";
+                exit(0);
+            }
+
+        if (A[i].priority>leader[0])
+        {
+            leader[0] = A[i].priority;
+            leader [1] = i;
+        }
+
+        oldStatus[i] = true;
+    }
+}
+
+void upAgain(node *A, int num, bool *oldStatus)
+{
+    for (int i = 0; i<num; i++)
+        {
+            if (oldStatus[i]==false && A[i].status==true)
+            {
+                cout<<"\n\n\t\t***BREAKING NEWS***\n";
+                cout<<"\tNode ["<<i<<"] "<<A[i].PID<<" : "<<A[i].priority<<" is back to LIVE!"<<endl;
+            }
+            oldStatus[i]=A[i].status;
+        }
+}
+
+void backToLife(node *A, int num, clock_t *start, int *randt)
+{
+    for (int i = 0; i<num; i++)
+            {
+                if (start[i]!=0)
+                {
+                    if (((clock()/100) - start[i])>randt[i])
+                    {
+                        A[i].status = true;
+                        start[i] = 0;
+                    }
+                }
+            }
+}
+
+void setLeader(node *A, int *leader, int num)
+{
+    for (int i = 0; i<num; i++)
+        {
+            if (A[i].status)
+                A[i].leaderIndex = leader[1];
+        }
+}
+
+void waitToFail(node *A, int *leader, int num, bool *oldStatus, clock_t *start, int *randt)
+{
+    int tmp;
+    while (true)
+        {
+            if (tmp == 0)
+                {
+                    sense(A, leader[1], num, false);
+                    tmp = leader[1];
+                    oldStatus[tmp] = false;
+                    A[tmp].leaderIndex = -1;
+                    start[tmp] = clock()/100;
+                    randt[tmp] = (3 + rand()%8)*10;
+                    break;
+                }
+            else
+                sense(A, leader[1], num, true);
+            tmp = rand()%10;
+        }
 }
